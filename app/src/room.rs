@@ -52,6 +52,14 @@ impl Room {
 }
 
 impl TimeSlot {
+    fn add_signed_hours(orig: u8, delta: i8) -> u8 {
+        let mut new = (orig as i8) + delta;
+        if new < 0 {
+            new += 24;
+        }
+        (new % 24) as u8
+    }
+
     pub(crate) fn from_label(label: impl AsRef<str>) -> Option<Self> {
         let label: &str = label.as_ref();
         let mut it = label.split(":");
@@ -61,18 +69,17 @@ impl TimeSlot {
         assert!(min == 0 || min == 30);
         let am_pm = it.next()?;
         // convert to 24 hour time
-        let hour = (match am_pm {
+        let hour = match am_pm {
             "AM" | "am" => hour,
             "PM" | "pm" => hour + 12,
             _ => return None,
-        } + 19)
-            % 24;
-        let time_slot = hour * 2 + min / 30;
+        };
+        let time_slot = Self::add_signed_hours(hour, -5) * 2 + min / 30;
         Some(Self(time_slot))
     }
 
     pub(crate) fn to_label(&self) -> String {
-        let hour = (self.0 / 2 + 5) % 24;
+        let hour = Self::add_signed_hours(self.0 / 2, 5);
         let min = if self.0 % 2 == 0 { "00" } else { "30" };
         let am_pm = if hour < 12 { "AM" } else { "PM" };
         let hour = if hour == 0 { 12 } else { hour % 12 };
@@ -87,6 +94,34 @@ impl TimeSlot {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn check_add_signed_hours_forward() {
+        let before = 0;
+        let after = TimeSlot::add_signed_hours(before, 1);
+        assert_eq!(after, 1);
+    }
+
+    #[test]
+    fn check_add_signed_hours_forward_overflow() {
+        let before = 23;
+        let after = TimeSlot::add_signed_hours(before, 1);
+        assert_eq!(after, 0);
+    }
+
+    #[test]
+    fn check_add_signed_hours_backward() {
+        let before = 1;
+        let after = TimeSlot::add_signed_hours(before, -1);
+        assert_eq!(after, 0);
+    }
+
+    #[test]
+    fn check_add_signed_hours_backward_overflow() {
+        let before = 0;
+        let after = TimeSlot::add_signed_hours(before, -1);
+        assert_eq!(after, 23);
+    }
 
     #[test]
     fn five_am_is_the_origin() {

@@ -2,6 +2,10 @@ use chrono::{DateTime, NaiveDate};
 use fantoccini::{elements::Element, wd::Capabilities, ClientBuilder, Locator};
 use thiserror::Error;
 
+mod room;
+
+use room::Room;
+
 const WINDOW_WIDTH: u32 = 1920;
 const WINDOW_HEIGHT: u32 = 1080;
 
@@ -33,18 +37,6 @@ enum FindSearchButtonError {
     MoreThanOneButtonFound,
     #[error("Fantoccini error: {0}")]
     FantocciniError(#[from] fantoccini::error::CmdError),
-}
-
-struct RoomInfo {
-    name: String,
-    description: String,
-    inferred_capacity: Option<u8>,
-}
-
-enum Room {
-    // 2-05A Meeting Room
-    R205AMeetingRoom,
-    UnknownRoom(RoomInfo),
 }
 
 async fn find_search_button(c: &fantoccini::Client) -> Result<Element, FindSearchButtonError> {
@@ -89,6 +81,9 @@ async fn available_rooms(
     let rooms_lis = c.find_all(Locator::Css(".room-booking-card")).await?;
     for room in rooms_lis {
         room.take_next_screenshot(sc).await;
+        let title: Element = room.find(Locator::Css(".uk-card-title")).await?;
+        let title: String = title.text().await?;
+        let room: Option<Room> = Room::try_from_title(title);
     }
 
     Ok(rooms)
@@ -110,9 +105,9 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
 
     c.set_window_rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT).await?;
 
-    let now = chrono::Local::now();
-    let today = now.date_naive();
-    let available_rooms = available_rooms(&c, today, 2).await?;
+    let now: DateTime<chrono::Local> = chrono::Local::now();
+    let today: NaiveDate = now.date_naive();
+    let available_rooms: Vec<Room> = available_rooms(&c, today, 2).await?;
 
     c.close().await
 }

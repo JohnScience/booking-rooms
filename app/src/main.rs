@@ -1,10 +1,12 @@
+// TODO: consider using futures::future::join_all for async iteration
+
 use chrono::{DateTime, NaiveDate};
 use fantoccini::{elements::Element, wd::Capabilities, ClientBuilder, Locator};
 use thiserror::Error;
 
 mod room;
 
-use room::RoomChoice;
+use room::{Availability, RoomChoice};
 
 use crate::room::Room;
 
@@ -62,8 +64,8 @@ async fn available_rooms(
     c: &fantoccini::Client,
     date: NaiveDate,
     group_size: u8,
-) -> Result<Vec<RoomChoice>, fantoccini::error::CmdError> {
-    let rooms = Vec::new();
+) -> Result<Vec<(Room, Availability)>, fantoccini::error::CmdError> {
+    let mut rooms = Vec::new();
     let booking_url = format!(
         "https://calgarylibrary.ca/events-and-programs/book-a-space/book-a-room/?date={}&location=1&groupsize={}",
         date.format("%Y-%m-%d"),
@@ -81,16 +83,55 @@ async fn available_rooms(
     let search_button = find_search_button(c).await.unwrap();
     search_button.take_next_screenshot(sc).await;
 
-    let rooms_lis = c.find_all(Locator::Css(".room-booking-card")).await?;
-    for room in rooms_lis {
-        room.take_next_screenshot(sc).await;
-        let title: Element = room.find(Locator::Css(".uk-card-title")).await?;
+    for room_elem in c.find_all(Locator::Css(".room-booking-card")).await? {
+        room_elem.take_next_screenshot(sc).await;
+        let title: Element = room_elem.find(Locator::Css(".uk-card-title")).await?;
         let title: String = title.text().await?;
         let room_choice: RoomChoice = RoomChoice::from_title(&title);
-        let description: Element = room.find(Locator::Css("p")).await?;
+        let description: Element = room_elem.find(Locator::Css("p")).await?;
         let description: String = description.text().await?;
         let room = Room::new(room_choice, title, description);
-        println!("{:?}", room);
+
+        // FIXME: fix this
+        let availability_panel = {
+            let mut availability_panel: Option<Element> = None;
+            let elems = room_elem
+                .find_all(Locator::Css(".availability-panel"))
+                .await?;
+            println!("{}", elems.len());
+            for elem in elems {
+                if elem.text().await?.starts_with("View Availability") {
+                    availability_panel = match availability_panel {
+                        None => Some(elem),
+                        Some(_) => panic!("More than one availability panel found"),
+                    };
+                    break;
+                }
+            }
+            availability_panel.unwrap()
+        };
+        availability_panel.take_next_screenshot(sc).await;
+        let view_availability_button = availability_panel
+            .find(Locator::Css("a.availability"))
+            .await?;
+        view_availability_button.click().await?;
+        let time_slots: Vec<Element> = availability_panel
+            .find_all(Locator::Css("li.time-slot"))
+            .await?;
+        println!("{time_slots:?}");
+        let time_slots: Vec<String> = {
+            let mut v: Vec<String> = Vec::new();
+            for time_slot in time_slots {
+                let time_slot: String = time_slot.text().await?;
+                v.push(time_slot);
+            }
+            v
+        };
+        println!("{room:?}");
+        let availability = Availability::from(time_slots);
+        println!("{availability}");
+
+        rooms.push((room, availability));
     }
 
     Ok(rooms)
@@ -114,7 +155,8 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
 
     let now: DateTime<chrono::Local> = chrono::Local::now();
     let today: NaiveDate = now.date_naive();
-    let available_rooms: Vec<RoomChoice> = available_rooms(&c, today, 10).await?;
+    let available_rooms: Vec<(Room, Availability)> =
+        available_rooms(&c, today.succ_opt().unwrap().succ_opt().unwrap(), 10).await?;
 
     c.close().await
 }

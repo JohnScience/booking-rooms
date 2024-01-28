@@ -49,6 +49,8 @@ pub(crate) enum KnownRoom {
     R319CMeetingRoom,
     // 3-20A Idea Lab
     R320AIdeaLab,
+    // 3-16B
+    R316B,
 }
 
 /// Either a specific room or an unknown room.
@@ -92,6 +94,7 @@ impl RoomChoice {
             "3-17B Field Law Meeting Room" => R317BFieldLawMeetingRoom,
             "3-19C Meeting Room" => R319CMeetingRoom,
             "3-20A Idea Lab" => R320AIdeaLab,
+            "3-16B" => R316B,
             _ => return RoomChoice::UnknownRoom,
         };
         RoomChoice::KnownRoom(known_room)
@@ -163,6 +166,38 @@ impl Room {
             description,
             inferred_capacity,
         }
+    }
+}
+
+impl<It> From<It> for Availability
+where
+    It: IntoIterator<Item = String>,
+{
+    fn from(it: It) -> Self {
+        let mut time_slots = Vec::new();
+        for time_slot in it {
+            let time_slot = TimeSlot::from_label(time_slot).unwrap();
+            time_slots.push(time_slot);
+        }
+        Self(time_slots)
+    }
+}
+
+impl std::fmt::Display for Availability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0.is_empty() {
+            return write!(f, "Fully booked");
+        };
+        let mut it = self.0.iter();
+        write!(f, "[")?;
+        if let Some(time_slot) = it.next() {
+            write!(f, "{}", time_slot.to_label())?;
+            for time_slot in it {
+                write!(f, ", {}", time_slot.to_label())?;
+            }
+        }
+        write!(f, "]")?;
+        Ok(())
     }
 }
 

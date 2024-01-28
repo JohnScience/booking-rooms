@@ -1,9 +1,3 @@
-struct RoomInfo {
-    name: String,
-    description: String,
-    inferred_capacity: Option<u8>,
-}
-
 pub(crate) enum RoomChoice {
     // 2-05A Meeting Room
     R205AMeetingRoom,
@@ -25,8 +19,10 @@ pub(crate) enum RoomChoice {
 }
 
 struct Room {
-    info: RoomInfo,
     choice: RoomChoice,
+    name: String,
+    description: String,
+    inferred_capacity: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

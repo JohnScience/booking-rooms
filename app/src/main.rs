@@ -1,9 +1,98 @@
+use chrono::{DateTime, NaiveDate};
 use fantoccini::{elements::Element, wd::Capabilities, ClientBuilder, Locator};
+use thiserror::Error;
 
-// async fn available_rooms(
-//     c: &fantoccini::Client,
-//     date:
-// )
+const WINDOW_WIDTH: u32 = 1920;
+const WINDOW_HEIGHT: u32 = 1080;
+
+trait TakeNextScreenshot {
+    async fn take_next_screenshot(&self, screenshot_counter: &mut usize);
+}
+
+impl TakeNextScreenshot for Element {
+    async fn take_next_screenshot(&self, screenshot_counter: &mut usize) {
+        let screenshot_png = self.screenshot().await.unwrap();
+        std::fs::write(format!("{screenshot_counter}.png"), screenshot_png).unwrap();
+        *screenshot_counter += 1;
+    }
+}
+
+impl TakeNextScreenshot for fantoccini::Client {
+    async fn take_next_screenshot(&self, screenshot_counter: &mut usize) {
+        let screenshot_png = self.screenshot().await.unwrap();
+        std::fs::write(format!("{screenshot_counter}.png"), screenshot_png).unwrap();
+        *screenshot_counter += 1;
+    }
+}
+
+#[derive(Error, Debug)]
+enum FindSearchButtonError {
+    #[error("No search button found")]
+    NoButtonFound,
+    #[error("More than one search button found")]
+    MoreThanOneButtonFound,
+    #[error("Fantoccini error: {0}")]
+    FantocciniError(#[from] fantoccini::error::CmdError),
+}
+
+struct RoomInfo {
+    name: String,
+    description: String,
+    inferred_capacity: Option<u8>,
+}
+
+enum Room {
+    // 2-05A Meeting Room
+    R205AMeetingRoom,
+    UnknownRoom(RoomInfo),
+}
+
+async fn find_search_button(c: &fantoccini::Client) -> Result<Element, FindSearchButtonError> {
+    let buttons = c
+        .find_all(Locator::Css("button.btn-submission.red[value='Search']"))
+        .await?;
+    let mut button: Option<Element> = None;
+    for b in buttons {
+        if b.is_displayed().await? {
+            button = match button {
+                None => Some(b),
+                Some(_) => return Err(FindSearchButtonError::MoreThanOneButtonFound),
+            };
+            break;
+        }
+    }
+    button.ok_or(FindSearchButtonError::NoButtonFound)
+}
+
+async fn available_rooms(
+    c: &fantoccini::Client,
+    date: NaiveDate,
+    group_size: u8,
+) -> Result<Vec<Room>, fantoccini::error::CmdError> {
+    let rooms = Vec::new();
+    let booking_url = format!(
+        "https://calgarylibrary.ca/events-and-programs/book-a-space/book-a-room/?date={}&location=1&groupsize={}",
+        date.format("%Y-%m-%d"),
+        group_size
+    );
+    c.goto(&booking_url).await?;
+
+    // screenshot counter
+    let mut sc: usize = 0;
+    let sc = &mut sc;
+
+    c.take_next_screenshot(sc).await;
+
+    let search_button = find_search_button(c).await.unwrap();
+    search_button.take_next_screenshot(sc).await;
+
+    let rooms_lis = c.find_all(Locator::Css(".room-booking-card")).await?;
+    for room in rooms_lis {
+        room.take_next_screenshot(sc).await;
+    }
+
+    Ok(rooms)
+}
 
 // let's set up the sequence of steps we want the browser to take
 #[tokio::main]
@@ -19,42 +108,11 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
         .await
         .expect("failed to connect to WebDriver");
 
-    c.set_window_rect(0, 0, 1920, 1080).await?;
+    c.set_window_rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT).await?;
 
-    c.goto("https://calgarylibrary.ca/events-and-programs/book-a-space/book-a-room/")
-        .await?;
-    let url = c.current_url().await?;
-    assert_eq!(
-        url.as_ref(),
-        "https://calgarylibrary.ca/events-and-programs/book-a-space/book-a-room/"
-    );
-
-    let screenshot_png = c.screenshot().await.unwrap();
-    std::fs::write("0.png", screenshot_png).unwrap();
-
-    // There are more than one button that matches the selector
-    let buttons = c
-        .find_all(Locator::Css("button.btn-submission.red[value='Search']"))
-        .await?;
-    let mut button: Option<Element> = None;
-    for b in buttons {
-        if b.is_displayed().await? {
-            button = match button {
-                None => Some(b),
-                Some(_) => panic!("More than one button found"),
-            };
-            break;
-        }
-    }
-    let button = button.unwrap();
-    let screenshot_png = button.screenshot().await.unwrap();
-    std::fs::write("1.png", screenshot_png).unwrap();
-
-    // // click "Foo Lake"
-    // c.find(Locator::LinkText("Foo Lake")).await?.click().await?;
-
-    // let url = c.current_url().await?;
-    // assert_eq!(url.as_ref(), "https://en.wikipedia.org/wiki/Foo_Lake");
+    let now = chrono::Local::now();
+    let today = now.date_naive();
+    let available_rooms = available_rooms(&c, today, 2).await?;
 
     c.close().await
 }

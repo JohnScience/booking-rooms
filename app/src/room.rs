@@ -4,7 +4,7 @@ struct RoomInfo {
     inferred_capacity: Option<u8>,
 }
 
-pub(crate) enum Room {
+pub(crate) enum RoomChoice {
     // 2-05A Meeting Room
     R205AMeetingRoom,
     // 2-05B Meeting Room
@@ -21,7 +21,12 @@ pub(crate) enum Room {
     R320GMeetingRoom,
     // 3-20H Meeting Room
     R320HMeetingRoom,
-    UnknownRoom(RoomInfo),
+    UnknownRoom,
+}
+
+struct Room {
+    info: RoomInfo,
+    choice: RoomChoice,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -29,9 +34,9 @@ struct TimeSlot(u8);
 
 pub(crate) struct Availability(Vec<TimeSlot>);
 
-impl Room {
+impl RoomChoice {
     pub(crate) fn try_from_title(title: impl AsRef<str>) -> Option<Self> {
-        use Room::*;
+        use RoomChoice::*;
 
         let known_room = match title.as_ref() {
             "2-05A Meeting Room" => R205AMeetingRoom,

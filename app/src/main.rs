@@ -4,7 +4,7 @@ use thiserror::Error;
 
 mod room;
 
-use room::Room;
+use room::RoomChoice;
 
 const WINDOW_WIDTH: u32 = 1920;
 const WINDOW_HEIGHT: u32 = 1080;
@@ -60,7 +60,7 @@ async fn available_rooms(
     c: &fantoccini::Client,
     date: NaiveDate,
     group_size: u8,
-) -> Result<Vec<Room>, fantoccini::error::CmdError> {
+) -> Result<Vec<RoomChoice>, fantoccini::error::CmdError> {
     let rooms = Vec::new();
     let booking_url = format!(
         "https://calgarylibrary.ca/events-and-programs/book-a-space/book-a-room/?date={}&location=1&groupsize={}",
@@ -71,6 +71,7 @@ async fn available_rooms(
 
     // screenshot counter
     let mut sc: usize = 0;
+    // we shadow sc in order to avoid taking &mut references to it everywhere
     let sc = &mut sc;
 
     c.take_next_screenshot(sc).await;
@@ -83,7 +84,7 @@ async fn available_rooms(
         room.take_next_screenshot(sc).await;
         let title: Element = room.find(Locator::Css(".uk-card-title")).await?;
         let title: String = title.text().await?;
-        let room: Option<Room> = Room::try_from_title(title);
+        let room: Option<RoomChoice> = RoomChoice::try_from_title(title);
     }
 
     Ok(rooms)
@@ -107,7 +108,7 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
 
     let now: DateTime<chrono::Local> = chrono::Local::now();
     let today: NaiveDate = now.date_naive();
-    let available_rooms: Vec<Room> = available_rooms(&c, today, 2).await?;
+    let available_rooms: Vec<RoomChoice> = available_rooms(&c, today, 2).await?;
 
     c.close().await
 }

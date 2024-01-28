@@ -36,6 +36,18 @@ pub(crate) enum RoomChoice {
     R320GMeetingRoom,
     // 3-20H Meeting Room
     R320HMeetingRoom,
+    // 3-10A Meeting Room
+    R310AMeetingRoom,
+    // 3-10B Meeting Room
+    R310BMeetingRoom,
+    // 3-17A Meeting Room
+    R317AMeetingRoom,
+    // 3-17B Field Law Meeting Room
+    R317BFieldLawMeetingRoom,
+    // 3-19C Meeting Room
+    R319CMeetingRoom,
+    // 3-20A Idea Lab
+    R320AIdeaLab,
     UnknownRoom,
 }
 
@@ -67,7 +79,12 @@ impl RoomChoice {
             "3-20C Meeting Room" => R320CMeetingRoom,
             "3-20G Meeting Room" => R320GMeetingRoom,
             "3-20H Meeting Room" => R320HMeetingRoom,
-
+            "3-10A Meeting Room" => R310AMeetingRoom,
+            "3-10B Meeting Room" => R310BMeetingRoom,
+            "3-17A Meeting Room" => R317AMeetingRoom,
+            "3-17B Field Law Meeting Room" => R317BFieldLawMeetingRoom,
+            "3-19C Meeting Room" => R319CMeetingRoom,
+            "3-20A Idea Lab" => R320AIdeaLab,
             _ => UnknownRoom,
         }
     }

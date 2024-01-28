@@ -112,6 +112,9 @@ impl TimeSlot {
 
     pub(crate) fn from_label(label: impl AsRef<str>) -> Option<Self> {
         let label: &str = label.as_ref();
+        if label.starts_with("Booked") {
+            return None;
+        }
         let mut it = label.split(":");
         let hour = it.next()?.parse::<u8>().ok()?;
         let mut it = it.next()?.split(" ");
@@ -175,8 +178,7 @@ where
 {
     fn from(it: It) -> Self {
         let mut time_slots = Vec::new();
-        for time_slot in it {
-            let time_slot = TimeSlot::from_label(time_slot).unwrap();
+        for time_slot in it.into_iter().filter_map(|s| TimeSlot::from_label(s)) {
             time_slots.push(time_slot);
         }
         Self(time_slots)

@@ -92,33 +92,16 @@ async fn available_rooms(
         let description: String = description.text().await?;
         let room = Room::new(room_choice, title, description);
 
-        // FIXME: fix this
-        let availability_panel = {
-            let mut availability_panel: Option<Element> = None;
-            let elems = room_elem
-                .find_all(Locator::Css(".availability-panel"))
-                .await?;
-            println!("{}", elems.len());
-            for elem in elems {
-                if elem.text().await?.starts_with("View Availability") {
-                    availability_panel = match availability_panel {
-                        None => Some(elem),
-                        Some(_) => panic!("More than one availability panel found"),
-                    };
-                    break;
-                }
-            }
-            availability_panel.unwrap()
-        };
-        availability_panel.take_next_screenshot(sc).await;
-        let view_availability_button = availability_panel
-            .find(Locator::Css("a.availability"))
-            .await?;
+        let view_availability_button = room_elem.find(Locator::Css("a.availability")).await?;
+        view_availability_button.take_next_screenshot(sc).await;
         view_availability_button.click().await?;
-        let time_slots: Vec<Element> = availability_panel
-            .find_all(Locator::Css("li.time-slot"))
-            .await?;
-        println!("{time_slots:?}");
+
+        // let availability_panel = room_elem.find(Locator::Css(".availability-panel")).await?;
+        // availability_panel.take_next_screenshot(sc).await;
+
+        room_elem.take_next_screenshot(sc).await;
+
+        let time_slots: Vec<Element> = room_elem.find_all(Locator::Css("li.time-slot")).await?;
         let time_slots: Vec<String> = {
             let mut v: Vec<String> = Vec::new();
             for time_slot in time_slots {

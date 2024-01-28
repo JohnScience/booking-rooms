@@ -17,9 +17,8 @@ fn stringly_capacity(haystack: &str) -> Option<&str> {
             .map(|m| m.as_str().strip_prefix("It has a capacity of ").unwrap()))
 }
 
-/// Either a specific room or an unknown room.
 #[derive(Debug)]
-pub(crate) enum RoomChoice {
+pub(crate) enum KnownRoom {
     // 2-05A Meeting Room
     R205AMeetingRoom,
     // 2-05B Meeting Room
@@ -48,6 +47,12 @@ pub(crate) enum RoomChoice {
     R319CMeetingRoom,
     // 3-20A Idea Lab
     R320AIdeaLab,
+}
+
+/// Either a specific room or an unknown room.
+#[derive(Debug)]
+pub(crate) enum RoomChoice {
+    KnownRoom(KnownRoom),
     UnknownRoom,
 }
 
@@ -66,9 +71,9 @@ pub(crate) struct Availability(Vec<TimeSlot>);
 
 impl RoomChoice {
     pub(crate) fn from_title(title: impl AsRef<str>) -> Self {
-        use RoomChoice::*;
+        use KnownRoom::*;
 
-        match title.as_ref() {
+        let known_room = match title.as_ref() {
             "2-05A Meeting Room" => R205AMeetingRoom,
             "2-05B Meeting Room" => R205BMeetingRoom,
             "2-05C Meeting Room" => R205CMeetingRoom,
@@ -85,8 +90,9 @@ impl RoomChoice {
             "3-17B Field Law Meeting Room" => R317BFieldLawMeetingRoom,
             "3-19C Meeting Room" => R319CMeetingRoom,
             "3-20A Idea Lab" => R320AIdeaLab,
-            _ => UnknownRoom,
-        }
+            _ => return RoomChoice::UnknownRoom,
+        };
+        RoomChoice::KnownRoom(known_room)
     }
 }
 

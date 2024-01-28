@@ -1,3 +1,5 @@
+/// Either a specific room or an unknown room.
+#[derive(Debug)]
 pub(crate) enum RoomChoice {
     // 2-05A Meeting Room
     R205AMeetingRoom,
@@ -20,7 +22,7 @@ pub(crate) enum RoomChoice {
 
 struct Room {
     choice: RoomChoice,
-    name: String,
+    title: String,
     description: String,
     inferred_capacity: Option<u8>,
 }
@@ -31,10 +33,10 @@ struct TimeSlot(u8);
 pub(crate) struct Availability(Vec<TimeSlot>);
 
 impl RoomChoice {
-    pub(crate) fn try_from_title(title: impl AsRef<str>) -> Option<Self> {
+    pub(crate) fn from_title(title: impl AsRef<str>) -> Self {
         use RoomChoice::*;
 
-        let known_room = match title.as_ref() {
+        match title.as_ref() {
             "2-05A Meeting Room" => R205AMeetingRoom,
             "2-05B Meeting Room" => R205BMeetingRoom,
             "2-05C Meeting Room" => R205CMeetingRoom,
@@ -46,9 +48,8 @@ impl RoomChoice {
             "3-20G Meeting Room" => R320GMeetingRoom,
             "3-20H Meeting Room" => R320HMeetingRoom,
 
-            _ => return None,
-        };
-        Some(known_room)
+            _ => UnknownRoom,
+        }
     }
 }
 
@@ -89,6 +90,21 @@ impl TimeSlot {
 
     pub(crate) fn to_discriminant(&self) -> u8 {
         self.0
+    }
+}
+
+impl Room {
+    fn infer_capacity_from_description(description: impl AsRef<str>) -> Option<u8> {
+        let description: &str = description.as_ref();
+        todo!()
+    }
+    fn new(choice: RoomChoice, title: String, description: String) -> Self {
+        Self {
+            choice,
+            title,
+            description,
+            inferred_capacity: None,
+        }
     }
 }
 

@@ -84,7 +84,10 @@ async fn available_rooms(
         room.take_next_screenshot(sc).await;
         let title: Element = room.find(Locator::Css(".uk-card-title")).await?;
         let title: String = title.text().await?;
-        let room: Option<RoomChoice> = RoomChoice::try_from_title(title);
+        let room_choice: RoomChoice = RoomChoice::from_title(title);
+        let description: Element = room.find(Locator::Css("p")).await?;
+        let description: String = description.text().await?;
+        println!("{:?}: {}", room_choice, description);
     }
 
     Ok(rooms)

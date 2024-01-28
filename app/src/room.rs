@@ -1,3 +1,22 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+fn stringly_capacity(haystack: &str) -> Option<&str> {
+    static RE1: Lazy<Regex> = Lazy::new(|| Regex::new(r"accommodate up to \S+ people").unwrap());
+    static RE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"It has a capacity of \S+").unwrap());
+    RE1.find(haystack)
+        .map(|m| {
+            m.as_str()
+                .strip_prefix("accommodate up to ")
+                .unwrap()
+                .strip_suffix(" people")
+                .unwrap()
+        })
+        .or(RE2
+            .find(haystack)
+            .map(|m| m.as_str().strip_prefix("It has a capacity of ").unwrap()))
+}
+
 /// Either a specific room or an unknown room.
 #[derive(Debug)]
 pub(crate) enum RoomChoice {
@@ -20,7 +39,8 @@ pub(crate) enum RoomChoice {
     UnknownRoom,
 }
 
-struct Room {
+#[derive(Debug)]
+pub(crate) struct Room {
     choice: RoomChoice,
     title: String,
     description: String,
@@ -96,14 +116,27 @@ impl TimeSlot {
 impl Room {
     fn infer_capacity_from_description(description: impl AsRef<str>) -> Option<u8> {
         let description: &str = description.as_ref();
-        todo!()
+        let capacity = stringly_capacity(description)?;
+        match capacity {
+            "ten" => Some(10),
+            "six" => Some(6),
+            "four" => Some(4),
+            number if number.chars().all(|c| c.is_ascii_digit()) => {
+                Some(number.parse::<u8>().unwrap())
+            }
+            other => {
+                println!("Couldn't infer capacity from {:?}", other);
+                None
+            }
+        }
     }
-    fn new(choice: RoomChoice, title: String, description: String) -> Self {
+    pub(crate) fn new(choice: RoomChoice, title: String, description: String) -> Self {
+        let inferred_capacity = Self::infer_capacity_from_description(description.as_str());
         Self {
             choice,
             title,
             description,
-            inferred_capacity: None,
+            inferred_capacity,
         }
     }
 }

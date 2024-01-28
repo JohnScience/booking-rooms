@@ -6,6 +6,8 @@ mod room;
 
 use room::RoomChoice;
 
+use crate::room::Room;
+
 const WINDOW_WIDTH: u32 = 1920;
 const WINDOW_HEIGHT: u32 = 1080;
 
@@ -84,10 +86,11 @@ async fn available_rooms(
         room.take_next_screenshot(sc).await;
         let title: Element = room.find(Locator::Css(".uk-card-title")).await?;
         let title: String = title.text().await?;
-        let room_choice: RoomChoice = RoomChoice::from_title(title);
+        let room_choice: RoomChoice = RoomChoice::from_title(&title);
         let description: Element = room.find(Locator::Css("p")).await?;
         let description: String = description.text().await?;
-        println!("{:?}: {}", room_choice, description);
+        let room = Room::new(room_choice, title, description);
+        println!("{:?}", room);
     }
 
     Ok(rooms)
@@ -111,7 +114,7 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
 
     let now: DateTime<chrono::Local> = chrono::Local::now();
     let today: NaiveDate = now.date_naive();
-    let available_rooms: Vec<RoomChoice> = available_rooms(&c, today, 2).await?;
+    let available_rooms: Vec<RoomChoice> = available_rooms(&c, today, 10).await?;
 
     c.close().await
 }

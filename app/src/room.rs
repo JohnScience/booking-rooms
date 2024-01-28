@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 fn stringly_capacity(haystack: &str) -> Option<&str> {
+    // TODO: consider using aho-corasick for this
     static RE1: Lazy<Regex> = Lazy::new(|| Regex::new(r"accommodate up to \S+ people").unwrap());
     static RE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"It has a capacity of \S+").unwrap());
     RE1.find(haystack)
@@ -17,6 +18,7 @@ fn stringly_capacity(haystack: &str) -> Option<&str> {
             .map(|m| m.as_str().strip_prefix("It has a capacity of ").unwrap()))
 }
 
+// TODO: add historical capacity data
 #[derive(Debug)]
 pub(crate) enum KnownRoom {
     // 2-05A Meeting Room

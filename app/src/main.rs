@@ -128,7 +128,7 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
         r#"{"browserName":"chrome","goog:chromeOptions":{"args":["--headless"]}}"#,
     )
     .unwrap();
-    let c = ClientBuilder::native()
+    let c = ClientBuilder::rustls()
         .capabilities(cap)
         .connect("http://localhost:9515")
         .await
@@ -138,8 +138,7 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
 
     let now: DateTime<chrono::Local> = chrono::Local::now();
     let today: NaiveDate = now.date_naive();
-    let available_rooms: Vec<(Room, Availability)> =
-        available_rooms(&c, today.succ_opt().unwrap().succ_opt().unwrap(), 10).await?;
-
+    let day = today.succ_opt().unwrap().succ_opt().unwrap();
+    let available_rooms: Vec<(Room, Availability)> = available_rooms(&c, day, 10).await?;
     c.close().await
 }

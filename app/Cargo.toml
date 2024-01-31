@@ -7,7 +7,9 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.33", features = ["clock"] }
-fantoccini = "0.19.3"
+fantoccini = { version = "0.19.3", default-features = false, features = [
+    "rustls-tls",
+] }
 once_cell = "1.19.0"
 regex = "1.10.3"
 serde_json = "1.0.112"

@@ -1,11 +1,10 @@
 FROM rust:latest as builder
 RUN apt-get update && \
-    apt-get install -y musl-tools openssl git && \
+    apt-get install -y musl-tools musl-dev openssl git docker.io && \
     rm -rf /var/lib/apt/lists/*
-RUN rustup target add x86_64-unknown-linux-musl
+RUN cargo install cross --git https://github.com/cross-rs/cross
 
 WORKDIR /
-ARG CACHEBUST=1
 RUN git clone -b debugging https://github.com/JohnScience/webdriver-downloader
 
 WORKDIR /webdriver-downloader
@@ -13,14 +12,13 @@ WORKDIR /webdriver-downloader
 RUN git checkout debugging
 
 WORKDIR /webdriver-downloader/webdriver-downloader-cli
-RUN cargo build --no-default-features -F rustls-tls --target x86_64-unknown-linux-musl --release
+RUN cross build --no-default-features -F rustls-tls --target x86_64-unknown-linux-musl --release
+# (Optional) Remove debug symbols
+RUN strip target/x86_64-unknown-linux-musl/release/webdriver-downloader-cli
 
 WORKDIR /app
-RUN cargo init
-COPY app/Cargo.toml app/Cargo.lock ./
-RUN cargo build --target x86_64-unknown-linux-musl --release
 COPY app .
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cross build --target x86_64-unknown-linux-musl --release
 # (Optional) Remove debug symbols
 RUN strip target/x86_64-unknown-linux-musl/release/app
 

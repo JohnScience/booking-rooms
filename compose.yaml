@@ -1,0 +1,13 @@
+services:
+  app:
+    build: ./app
+    environment:
+      - CHROMEDRIVER_PORT=4444
+      - CHROMEDRIVER_HOST=chromium-chromedriver
+    depends_on:
+      - chromium-chromedriver
+
+  chromium-chromedriver:
+    image: spryker/chromedriver
+    ports:
+      - "4444:4444"

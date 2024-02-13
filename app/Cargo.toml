@@ -13,3 +13,7 @@ regex = "1.10.3"
 serde_json = "1.0.112"
 thiserror = "1.0.56"
 tokio = { version = "1.35.1", features = ["full"] }
+openssl = { version = "*", optional = true }
+
+[features]
+vendored_ssl = ["openssl", "openssl/vendored"]

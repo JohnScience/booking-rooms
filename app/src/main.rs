@@ -1,5 +1,7 @@
 // TODO: consider using futures::future::join_all for async iteration
 
+use std::env;
+
 use chrono::{DateTime, NaiveDate};
 use fantoccini::{elements::Element, wd::Capabilities, ClientBuilder, Locator};
 use thiserror::Error;
@@ -128,11 +130,17 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
         r#"{"browserName":"chrome","goog:chromeOptions":{"args":["--headless"]}}"#,
     )
     .unwrap();
+    let addr = format!(
+        "http://{host}:{port}",
+        host = env::var("CHROMEDRIVER_HOST").unwrap(),
+        port = env::var("CHROMEDRIVER_PORT").unwrap()
+    );
+    println!("Connecting to WebDriver at {addr}...");
     let c = ClientBuilder::native()
         .capabilities(cap)
-        .connect("http://localhost:9515")
+        .connect(&addr)
         .await
-        .expect("failed to connect to WebDriver");
+        .unwrap_or_else(|e| panic!("failed to connect to WebDriver: {e:?}"));
 
     c.set_window_rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT).await?;
 
@@ -140,6 +148,10 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
     let today: NaiveDate = now.date_naive();
     let available_rooms: Vec<(Room, Availability)> =
         available_rooms(&c, today.succ_opt().unwrap().succ_opt().unwrap(), 10).await?;
+    for (room, availability) in available_rooms {
+        println!("{room:?}");
+        println!("{availability}");
+    }
 
     c.close().await
 }

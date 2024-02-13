@@ -127,7 +127,7 @@ async fn available_rooms(
 async fn main() -> Result<(), fantoccini::error::CmdError> {
     // https://github.com/jonhoo/fantoccini/issues/45#issuecomment-1546600219
     let cap: Capabilities = serde_json::from_str(
-        r#"{"browserName":"chrome","goog:chromeOptions":{"args":["--headless"]}}"#,
+        r#"{"browserName":"chrome","goog:chromeOptions":{"args":["--headless" , "--no-sandbox"]}}"#,
     )
     .unwrap();
     let addr = format!(

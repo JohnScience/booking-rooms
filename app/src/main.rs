@@ -132,8 +132,10 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
     .unwrap();
     let addr = format!(
         "http://{host}:{port}",
-        host = env::var("CHROMEDRIVER_HOST").unwrap(),
-        port = env::var("CHROMEDRIVER_PORT").unwrap()
+        host = env::var("CHROMEDRIVER_HOST")
+            .expect("Environment variable CHROMEDRIVER_HOST is not set"),
+        port = env::var("CHROMEDRIVER_PORT")
+            .expect("Environment variable CHROMEDRIVER_PORT is not set")
     );
     println!("Connecting to WebDriver at {addr}...");
     let c = ClientBuilder::native()

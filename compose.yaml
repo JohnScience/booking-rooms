@@ -6,6 +6,8 @@ services:
       - CHROMEDRIVER_HOST=chromium-chromedriver
     depends_on:
       - chromium-chromedriver
+    stdin_open: true
+    tty: true
 
   chromium-chromedriver:
     # FIXME: This image is a bit insecure but fixing the problem fundamentally is a bit too complex

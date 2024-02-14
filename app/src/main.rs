@@ -2,7 +2,7 @@
 
 use std::env;
 
-use chrono::{DateTime, NaiveDate};
+use chrono::{DateTime, Datelike, NaiveDate, Weekday};
 use fantoccini::{elements::Element, wd::Capabilities, ClientBuilder, Locator};
 use thiserror::Error;
 
@@ -125,9 +125,9 @@ async fn available_rooms(
 // let's set up the sequence of steps we want the browser to take
 #[tokio::main]
 async fn main() -> Result<(), fantoccini::error::CmdError> {
-    // https://github.com/jonhoo/fantoccini/issues/45#issuecomment-1546600219
+    // On `--headless` argument: https://github.com/jonhoo/fantoccini/issues/45#issuecomment-1546600219
     let cap: Capabilities = serde_json::from_str(
-        r#"{"browserName":"chrome","goog:chromeOptions":{"args":["--headless" , "--no-sandbox"]}}"#,
+        r#"{"browserName":"chrome","goog:chromeOptions":{"args":["--headless"]}}"#,
     )
     .unwrap();
     let addr = format!(
@@ -146,8 +146,38 @@ async fn main() -> Result<(), fantoccini::error::CmdError> {
 
     let now: DateTime<chrono::Local> = chrono::Local::now();
     let today: NaiveDate = now.date_naive();
-    let available_rooms: Vec<(Room, Availability)> =
-        available_rooms(&c, today.succ_opt().unwrap().succ_opt().unwrap(), 10).await?;
+
+    let mut s = String::new();
+
+    println!("For how many days ahead would you like to check the availability?");
+    let days_ahead = {
+        std::io::stdin().read_line(&mut s).unwrap();
+        s.trim()
+            .parse::<u8>()
+            .expect("Failed to parse the number of days ahead")
+    };
+
+    s.clear();
+
+    let mut day = today;
+    for _ in 0..days_ahead {
+        day = day.succ_opt().unwrap();
+    }
+
+    println!("Checking availability for {day:?}");
+
+    println!("What's the expected number of attendees? (Default: 10)");
+    let attendance: u8 = 'attendance: {
+        std::io::stdin().read_line(&mut s).unwrap();
+        if s.trim().is_empty() {
+            break 'attendance 10;
+        }
+        s.trim()
+            .parse::<u8>()
+            .expect("Failed to parse the number of attendees")
+    };
+
+    let available_rooms: Vec<(Room, Availability)> = available_rooms(&c, day, attendance).await?;
     for (room, availability) in available_rooms {
         println!("{room:?}");
         println!("{availability}");

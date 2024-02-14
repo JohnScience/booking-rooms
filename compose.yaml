@@ -8,6 +8,8 @@ services:
       - chromium-chromedriver
 
   chromium-chromedriver:
+    # FIXME: This image is a bit insecure but fixing the problem fundamentally is a bit too complex
+    # https://github.com/JohnScience/chromium-chromedriver#security
     image: spryker/chromedriver
     ports:
       - "4444:4444"

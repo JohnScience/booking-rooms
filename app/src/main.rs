@@ -2,7 +2,7 @@
 
 use std::env;
 
-use chrono::{DateTime, Datelike, NaiveDate, Weekday};
+use chrono::{DateTime, NaiveDate};
 use fantoccini::{elements::Element, wd::Capabilities, ClientBuilder, Locator};
 use thiserror::Error;
 

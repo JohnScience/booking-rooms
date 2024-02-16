@@ -3621,6 +3621,7 @@ dependencies = [
  "axum",
  "axum-embed",
  "rust-embed",
+ "sha2",
  "tao",
  "tokio",
  "which",

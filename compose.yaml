@@ -1,6 +1,6 @@
 services:
   app:
-    build: ./app
+    build: .
     environment:
       - CHROMEDRIVER_PORT=4444
       - CHROMEDRIVER_HOST=chromium-chromedriver

@@ -15,4 +15,6 @@ wry = "0.36.0"
 
 [build-dependencies]
 which = "6.0"
-sha2 = "0.10"
+cargo-emit = { git = "https://github.com/JohnScience/cargo-emit", features = [
+    "compare_and_set_contents_hash",
+] }

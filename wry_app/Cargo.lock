@@ -430,6 +430,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-emit"
+version = "0.2.1"
+source = "git+https://github.com/JohnScience/cargo-emit#c20478c43bbcaa9a4aae65e57d68e758aa922370"
+dependencies = [
+ "fxhash",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3620,8 +3628,8 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "axum-embed",
+ "cargo-emit",
  "rust-embed",
- "sha2",
  "tao",
  "tokio",
  "which",

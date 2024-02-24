@@ -54,9 +54,6 @@ fn main() -> wry::Result<()> {
 
     let commands = {
         fn commands<'a>(builder: wry::WebViewBuilder<'a>) -> wry::WebViewBuilder<'a> {
-            todo!()
-        }
-        move |builder: wry::WebViewBuilder| {
             builder.with_custom_protocol(
                 "tauriless".to_string(),
                 move |req: wry::http::request::Request<Vec<u8>>| {
@@ -96,6 +93,7 @@ fn main() -> wry::Result<()> {
                 },
             )
         }
+        commands
     };
 
     // starting the webview

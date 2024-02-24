@@ -1,31 +1,28 @@
 use axum::Router;
 use axum_embed::ServeEmbed;
 use rust_embed::RustEmbed;
-use std::{borrow::Cow, net::SocketAddr};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use tao::{
     event::{Event, StartCause, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+use tauriless::{command, commands, SyncCommand, WebViewBuilderExt};
 use wry::WebViewBuilder;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "../front/dist"]
 struct Assets;
 
-fn custom_protocol(
-    _req: wry::http::request::Request<Vec<u8>>,
-) -> wry::http::response::Response<Cow<'static, [u8]>> {
-    let resp = wry::http::response::Response::builder()
-        .status(wry::http::status::StatusCode::OK)
-        .header(
-            wry::http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            wry::http::HeaderValue::from_static("*"),
-        )
-        .body(Cow::<'static, [u8]>::Borrowed(b"Hello, world!"))
-        .unwrap();
+#[derive(Serialize, Deserialize)]
+struct MyStruct {
+    num: i32,
+}
 
-    resp
+#[command]
+fn do_stuff_with_num(my_struct: MyStruct) -> i32 {
+    my_struct.num * 2
 }
 
 async fn local_http_server_main(port_tx: tokio::sync::oneshot::Sender<u16>) {
@@ -55,11 +52,57 @@ fn main() -> wry::Result<()> {
 
     let port: u16 = port_rx.blocking_recv().unwrap();
 
+    let commands = |builder: wry::WebViewBuilder| {
+        builder.with_custom_protocol(
+            "tauriless".to_string(),
+            |req: wry::http::request::Request<Vec<u8>>| {
+                let (parts, body): (wry::http::request::Parts, Vec<u8>) = req.into_parts();
+                let uri: wry::http::uri::Uri = parts.uri;
+                let path: &str = uri.path();
+                let path: &str = path.trim_start_matches('/');
+                let resp_body: std::result::Result<Vec<u8>, tauriless::pot::Error> =
+                    match path {
+                        <__command_do_stuff_with_num as tauriless::Command>::NAME => {
+                            let args: <__command_do_stuff_with_num as tauriless::Command>::Args =
+                                match tauriless::pot::from_slice(body.as_slice()) {
+                                    Ok(args) => args,
+                                    Err(e) => return tauriless::handle_deserialization_error(
+                                        <__command_do_stuff_with_num as tauriless::Command>::NAME,
+                                        e,
+                                    ),
+                                };
+                            let ret: <__command_do_stuff_with_num as tauriless::Command>::RetTy =
+                                __command_do_stuff_with_num::command(args);
+                            tauriless::pot::to_vec(&ret)
+                        }
+                        _ => return tauriless::handle_unknown_command(path),
+                    };
+                let resp_body: Vec<u8> = match resp_body {
+                    Ok(body) => body,
+                    Err(e) => return tauriless::handle_serialization_error(e),
+                };
+                wry::http::response::Response::builder()
+                    .status(wry::http::StatusCode::OK)
+                    .header(
+                        wry::http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                        wry::http::HeaderValue::from_static("*"),
+                    )
+                    .body(std::borrow::Cow::Owned(resp_body))
+                    .unwrap()
+            },
+        )
+    };
+
     // starting the webview
     let _webview = WebViewBuilder::new(&window)
-        .with_url(&format!("http://localhost:{port}/"))?
+        .with_url(&format!("http://localhost:{port}/"))
+        .with_initialization_script(&format!("console.log('Server running at port ', {port});"))
         //.with_html(r#"<html><body><h1>Hello, world!</h1></body></html>"#)?
-        .with_custom_protocol("myproto".to_string(), custom_protocol)
+        //.with_custom_protocol(
+        //    "tauriless".to_string(),
+        //    __command_do_stuff_with_num::custom_protocol,
+        //)
+        .with_tauriless_commands(commands)
         .build()?;
 
     event_loop.run(move |event, _, control_flow| {

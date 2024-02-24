@@ -2,86 +2,62 @@ use proc_macro::{token_stream::IntoIter as TokenTreeIter, TokenStream};
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
-use syn::{FnArg, ItemFn, ReturnType};
+use syn::{FnArg, ReturnType, ItemFn};
 
-// "Impls expression" is a stipulative definition for an expression that evaluates to true
-// if the type implements a trait, and false otherwise.
-// Hence, `serde::Deserialize` "impls expression" is an expression that evaluates to true
-// if the type implements `serde::Deserialize`, and false otherwise.
-fn extend_with_serde_deseralize_impls_expr(
-    ts: &mut proc_macro2::TokenStream,
-    fn_arg_type: &syn::Type,
-) {
-    ts.extend(quote! {
-        {
-            trait DoesNotImplSerdeDeserialize {
-                const IMPLS_SERDE_DESERIALIZE: bool = false;
-            }
+mod impls_asserts;
 
-            impl<T: ?Sized> DoesNotImplSerdeDeserialize for T {}
+use impls_asserts::{
+    extend_with_serde_deserialize_impls_asserts,
+    extend_with_serde_serialize_impls_assert,
+    CloneableIterator,
+};
+use dyn_clone::clone_box;
 
-            struct Wrapper<T: ?Sized> (core::marker::PhantomData<T>);
-
-            #[allow(dead_code)]
-            impl<T: ?Sized + Copy> Wrapper<T> {
-                const IMPLS_SERDE_DESERIALIZE: bool = true;
-            }
-
-            <Wrapper<#fn_arg_type>>::IMPLS_SERDE_DESERIALIZE
-        }
-    });
-}
-
-// Extends the token stream with a const assertion that checks if the type
-// implements `serde::Deserialize`. If it doesn't, the compilation fails with
-// a custom error message.
-fn extend_with_serde_deserialize_impls_expr_assert(
-    ts: &mut proc_macro2::TokenStream,
-    fn_arg_type: &syn::Type,
-) {
-    let mut group_contents = proc_macro2::TokenStream::new();
-    extend_with_serde_deseralize_impls_expr(&mut group_contents, fn_arg_type);
-    let group_contents = proc_macro2::TokenStream::from(group_contents);
-    ts.extend(quote! {
-        // #[doc = "Checks that "]
-        // #[doc = stringify!(#fn_arg_type)]
-        // #[doc = " implements serde::Deserialize"]
-        #[doc = "Check if anything changes"]
-        const _: () = if !(#group_contents) {
-            panic!("The first argument of the command must implement serde::Deserialize");
-        };
-    });
-}
-
-fn extend_with_command(ts: &mut proc_macro2::TokenStream, fn_item: &ItemFn) {
-    let fn_name: &syn::Ident = &fn_item.sig.ident;
-    let cmd_name = format!("__command_{fn_name}");
-    let cmd_name = syn::Ident::new(&cmd_name, fn_name.span());
-}
-
-fn extend_with_serde_deserialize_impls_expr_asserts(
-    ts: &mut proc_macro2::TokenStream,
-    args: &Punctuated<FnArg, Comma>,
-) {
-    let mut args_iter = args.clone().into_iter();
-    let Some(maybe_receiver) = args_iter.next() else {
-        return;
-    };
-
-    let FnArg::Typed(first_typed_arg) = maybe_receiver else {
-        panic!("The first argument of the command can't be a receiver like `self`, `&self`, or `&mut self`")
-    };
-
-    let first_arg_type: &syn::Type = &first_typed_arg.ty;
-    extend_with_serde_deserialize_impls_expr_assert(ts, first_arg_type);
-
-    for arg in args_iter {
-        let FnArg::Typed(typed_arg) = arg else {
-            panic!("The receiver like `self`, `&self`, or `&mut self` can't be a non-first argument of a function");
-        };
-        let arg_type: &syn::Type = &typed_arg.ty;
-        extend_with_serde_deserialize_impls_expr_assert(ts, arg_type);
+struct Commands(syn::punctuated::Punctuated<syn::Ident, syn::token::Comma>);
+impl syn::parse::Parse for Commands {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let content = syn::punctuated::Punctuated::<syn::Ident, syn::token::Comma>::parse_terminated(input)?;
+        Ok(Commands(content))
     }
+}
+
+fn extend_with_command(ts: &mut proc_macro2::TokenStream, fn_item: &ItemFn, fn_typed_args: &dyn CloneableIterator<&syn::PatType>) {
+    let name: &syn::Ident = &fn_item.sig.ident;
+    let name_str = name.to_string();
+    let asyncness = &fn_item.sig.asyncness;
+    let cmd_name = format!("__command_{name}");
+    let cmd_name = syn::Ident::new(&cmd_name, name.span());
+    let typed_args_count = clone_box(fn_typed_args).count();
+    let types_iter = clone_box(fn_typed_args).map(|pat_type| &pat_type.ty);
+    let args_iter = (0..typed_args_count).map(|i| syn::Ident::new(&format!("arg{}", i), name.span()));
+    let args_iter_clone = args_iter.clone();
+    let return_type = match &fn_item.sig.output {
+        ReturnType::Default => quote! {()},
+        ReturnType::Type(_right_arrow, ty) => quote! {#ty},
+    };
+    let trait_impl = if asyncness.is_none() {
+        quote! {
+            impl tauriless::SyncCommand for #cmd_name {
+                type Args = (#(#types_iter),*);
+                type RetTy = #return_type;
+                const NAME: &'static str = #name_str;
+
+                fn command( (#(#args_iter),*): Self::Args ) -> Self::RetTy {
+                    #name(#(#args_iter_clone),*)
+                }
+            }
+        }
+    } else {
+        todo!()
+    };
+    let cmd = quote! {
+        #[allow(non_camel_case_types)]
+        struct #cmd_name;
+
+        #trait_impl
+    };
+
+    ts.extend(cmd);
 }
 
 #[proc_macro_attribute]
@@ -99,11 +75,74 @@ pub fn command(attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_sig: &syn::Signature = &fn_item.sig;
 
     let inputs: &Punctuated<FnArg, Comma> = &fn_sig.inputs;
-    let output: &ReturnType = &fn_sig.output;
+    let return_type: &ReturnType = &fn_sig.output;
 
     let mut ts = proc_macro2::TokenStream::new();
-    extend_with_serde_deserialize_impls_expr_asserts(&mut ts, inputs);
-    extend_with_command(&mut ts, &fn_item);
+    let fn_typed_args: Box<dyn CloneableIterator<&syn::PatType>> = extend_with_serde_deserialize_impls_asserts(&mut ts, inputs);
+    let fn_typed_args: &dyn CloneableIterator<&syn::PatType> = &*fn_typed_args;
+    extend_with_serde_serialize_impls_assert(&mut ts, return_type);
+    extend_with_command(&mut ts, &fn_item, fn_typed_args);
     ts.extend(quote!(#fn_item));
+    ts.into()
+}
+
+#[proc_macro]
+pub fn commands(input: TokenStream) -> TokenStream {
+    let comma_separated_commands = syn::parse_macro_input!(input as Commands);
+    let comma_separated_commands = comma_separated_commands.0.clone().into_iter().map(|ident| {
+        let ident_str = ident.to_string();
+        let cmd_name = format!("__command_{ident_str}");
+        syn::Ident::new(&cmd_name, ident.span())
+    });
+
+    let mut branches = proc_macro2::TokenStream::new();
+
+    for cmd in comma_separated_commands {
+        branches.extend(quote! {
+            <#cmd as tauriless::Command>::NAME => {
+                let args: <#cmd as tauriless::Command>::Args = match tauriless::pot::from_slice(body.as_slice()) {
+                    Ok(args) => args,
+                    Err(e) => return tauriless::handle_deserialization_error(<#cmd as tauriless::Command>::NAME, e),
+                };
+                let ret: <#cmd as tauriless::Command>::RetTy = #cmd::command(args);
+                tauriless::pot::to_vec(&ret)
+            },
+        });
+    }
+    branches.extend(quote! {
+        _ => return tauriless::handle_unknown_command(path),
+    });
+
+    let body_tail = quote! {
+        let resp_body: std::result::Result::<Vec<u8>, tauriless::pot::Error> = match path {
+            #branches
+        };
+        let resp_body: Vec<u8> = match resp_body {
+            Ok(body) => body,
+            Err(e) => return tauriless::handle_serialization_error(e),
+        };
+        #[cfg(debug_assertions)]
+        println!("Sending a response: {:#?}", resp_body);
+        wry::http::response::Response::builder()
+            .status(wry::http::StatusCode::OK)
+            .header(
+                wry::http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                wry::http::HeaderValue::from_static("*"),
+            )
+            .body(std::borrow::Cow::Owned(resp_body))
+            .unwrap()
+    };
+
+    let ts = quote! {
+        move |builder: wry::WebViewBuilder| builder.with_custom_protocol( "tauriless".to_string(), | req: wry::http::request::Request<Vec<u8>> | {
+            let (parts, body): (wry::http::request::Parts, Vec<u8>) = req.into_parts();
+            let uri: wry::http::uri::Uri = parts.uri;
+            let path: &str = uri.path();
+            let path: &str = path.trim_start_matches('/');
+
+            #body_tail
+        })
+    };
+    
     ts.into()
 }

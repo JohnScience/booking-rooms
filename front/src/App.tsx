@@ -2,9 +2,19 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import init, { invoke, encode } from "tauriless-js"
 
 function App() {
   const [count, setCount] = useState(0)
+  init().then(() => {
+    console.log("tauriless-js initialized!");
+    const encoded = encode({ num: 42 });
+    const v: Promise<unknown> = invoke("command", { num: 42 });
+    console.log("Result of tauriless_js.encode(): ", encoded);
+    v.then((result) => {
+      console.log("Result of tauriless_js.invoke(): ", result);
+    })
+  });
 
   return (
     <>

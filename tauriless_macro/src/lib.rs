@@ -24,6 +24,7 @@ impl syn::parse::Parse for Commands {
 fn extend_with_command(ts: &mut proc_macro2::TokenStream, fn_item: &ItemFn, fn_typed_args: &dyn CloneableIterator<&syn::PatType>) {
     let name: &syn::Ident = &fn_item.sig.ident;
     let name_str = name.to_string();
+    let url_name = name_str.replace("_", "-");
     let asyncness = &fn_item.sig.asyncness;
     let cmd_name = format!("__command_{name}");
     let cmd_name = syn::Ident::new(&cmd_name, name.span());
@@ -41,6 +42,8 @@ fn extend_with_command(ts: &mut proc_macro2::TokenStream, fn_item: &ItemFn, fn_t
                 type Args = (#(#types_iter),*);
                 type RetTy = #return_type;
                 const NAME: &'static str = #name_str;
+                #[doc = "URLs can't contain underscores, so they are replaced with dashes"]
+                const URL_NAME: &'static str = #url_name;
 
                 fn command( (#(#args_iter),*): Self::Args ) -> Self::RetTy {
                     #name(#(#args_iter_clone),*)
@@ -99,7 +102,7 @@ pub fn commands(input: TokenStream) -> TokenStream {
 
     for cmd in comma_separated_commands {
         branches.extend(quote! {
-            <#cmd as tauriless::Command>::NAME => {
+            <#cmd as tauriless::Command>::URL_NAME => {
                 let args: <#cmd as tauriless::Command>::Args = match tauriless::pot::from_slice(body.as_slice()) {
                     Ok(args) => args,
                     Err(e) => return tauriless::handle_deserialization_error(<#cmd as tauriless::Command>::NAME, e),
@@ -134,14 +137,20 @@ pub fn commands(input: TokenStream) -> TokenStream {
     };
 
     let ts = quote! {
-        move |builder: wry::WebViewBuilder| builder.with_custom_protocol( "tauriless".to_string(), | req: wry::http::request::Request<Vec<u8>> | {
-            let (parts, body): (wry::http::request::Parts, Vec<u8>) = req.into_parts();
-            let uri: wry::http::uri::Uri = parts.uri;
-            let path: &str = uri.path();
-            let path: &str = path.trim_start_matches('/');
-
-            #body_tail
-        })
+        {
+            // Using closures caused an error.
+            fn commands<'a>(builder: wry::WebViewBuilder<'a>) -> wry::WebViewBuilder<'a> {
+                builder.with_custom_protocol( "tauriless".to_string(), | req: wry::http::request::Request<Vec<u8>> | {
+                    let (parts, body): (wry::http::request::Parts, Vec<u8>) = req.into_parts();
+                    let uri: wry::http::uri::Uri = parts.uri;
+                    let path: &str = uri.path();
+                    let path: &str = path.trim_start_matches('/');
+        
+                    #body_tail
+                })
+            }
+            commands
+        }
     };
     
     ts.into()

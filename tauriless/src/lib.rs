@@ -28,6 +28,8 @@ impl<'a> WebViewBuilderExt for wry::WebViewBuilder<'a> {
 
 pub trait Command {
     const NAME: &'static str;
+    /// URLs are not allowed to contain underscores, so we use dashes instead.
+    const URL_NAME: &'static str;
     type Args: for<'a> serde::Deserialize<'a>;
     type RetTy: serde::Serialize;
 
@@ -73,7 +75,7 @@ pub fn handle_serialization_error(
 
 pub fn handle_unknown_command(cmd_name: &str) -> wry::http::response::Response<Cow<'static, [u8]>> {
     #[cfg(debug_assertions)]
-    println!("Unknown `tauriless` command: {cmd_name}");
+    println!("Unknown `tauriless` command: '{cmd_name}'.");
     wry::http::response::Response::builder()
         .status(wry::http::StatusCode::BAD_REQUEST)
         .header(
@@ -90,6 +92,7 @@ pub trait SyncCommand {
     type Args: for<'a> serde::Deserialize<'a>;
     type RetTy: serde::Serialize;
     const NAME: &'static str;
+    const URL_NAME: &'static str;
 
     fn command(args: Self::Args) -> Self::RetTy;
 
@@ -126,6 +129,7 @@ where
     C: SyncCommand + 'static,
 {
     const NAME: &'static str = C::NAME;
+    const URL_NAME: &'static str = C::URL_NAME;
     type Args = C::Args;
     type RetTy = C::RetTy;
 

@@ -104,8 +104,12 @@ pub fn invoke(command: &str, args: JsValue) -> Result<JsValue, JsValue> {
             xhr.set_onload(Some(handler.as_ref().unchecked_ref()));
             handler.forget();
         }
-        xhr.open_with_async("POST", "http://tauriless.localhost", true)
-            .unwrap();
+        xhr.open_with_async(
+            "POST",
+            &format!("http://tauriless.localhost/{command}", command = command.replace('_', "-")),
+            true,
+        )
+        .unwrap();
         xhr.send_with_opt_u8_array(Some(&encoded)).unwrap();
     });
 

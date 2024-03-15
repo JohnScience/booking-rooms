@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 fn stringly_capacity(haystack: &str) -> Option<&str> {
     // TODO: consider using aho-corasick for this
@@ -19,7 +20,7 @@ fn stringly_capacity(haystack: &str) -> Option<&str> {
 }
 
 // TODO: add historical capacity data
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum KnownRoom {
     // 2-05A Meeting Room
     R205AMeetingRoom,
@@ -54,13 +55,13 @@ pub(crate) enum KnownRoom {
 }
 
 /// Either a specific room or an unknown room.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum RoomChoice {
     KnownRoom(KnownRoom),
     UnknownRoom,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Room {
     choice: RoomChoice,
     title: String,
@@ -68,9 +69,10 @@ pub struct Room {
     inferred_capacity: Option<u8>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 struct TimeSlot(u8);
 
+#[derive(Serialize, Deserialize)]
 pub struct Availability(Vec<TimeSlot>);
 
 impl RoomChoice {

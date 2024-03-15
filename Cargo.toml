@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["app", "calgary_central_library", "ccl_headless_browser_server"]

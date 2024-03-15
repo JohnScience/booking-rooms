@@ -1,0 +1,55 @@
+:root {
+  --settings-dialog-width: 30vw;
+  --settings-dialog-height: 100px;
+}
+
+#header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  position: relative;
+  padding-left: 1vw;
+  padding-right: 1vw;
+}
+
+#header > h1 {
+  grid-column-start: 2;
+  grid-column-end: 2;
+}
+
+h1 {
+  margin: 0;
+  flex: 1;
+  text-align:center;
+}
+
+.settings {
+  margin-right: 0px;
+  margin-left: auto;
+  cursor: pointer;
+  margin-top: auto;
+  margin-bottom: auto;
+  font-size: 25px;
+}
+
+#settings-dialog {
+  position: absolute;
+  width: var(--settings-dialog-width);
+  height: auto;
+  left: calc(100% - var(--settings-dialog-width));
+  z-index: 2;
+  background-color: rgba(100, 100, 100, 0.6);
+}
+
+#settings-dialog > * {
+  margin: 0;
+}
+
+#settings-dialog-header {
+  display: flex;
+  justify-content: right;
+  padding-right: 4vh;
+}
+
+#settings-dialog-header > .settings {
+  font-size: 25px;
+}

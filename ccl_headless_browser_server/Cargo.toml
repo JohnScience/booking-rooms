@@ -1,0 +1,17 @@
+[package]
+name = "ccl_headless_browser_server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7.4", features = ["macros"] }
+serde = "1.0.197"
+tokio = { version = "1.36.0", features = ["rt-multi-thread"] }
+calgary_central_library = { path = "../calgary_central_library" }
+chrono = { version = "0.4.35", features = ["serde"] }
+arcstr = "1.1.5"
+
+[dev-dependencies]
+reqwest = { version = "0.11.26", features = ["json"] }

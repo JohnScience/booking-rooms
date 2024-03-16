@@ -8,11 +8,7 @@ type CalendarProps = {
 };
 
 function Calendar({ getSettings }: CalendarProps) {
-  const [dates, setDates] = (() => {
-    const map = new Map();
-    // map.set(new Date(2024, 2, 6), "data");
-    return useState(map);
-  })();
+  const [dates, setDates] = useState(new Map());
 
   function renderCell(date: Date): React.ReactNode {
     if (dates.has(date.getTime())) {
@@ -22,16 +18,16 @@ function Calendar({ getSettings }: CalendarProps) {
   }
 
   function onSelect(date: Date) {
-    let time = date.getTime();
+    const time = date.getTime();
     console.log(time);
     console.log(dates);
     if (dates.has(time)) {
       dates.delete(time);
     } else {
         const data = getAvailabilityForDay(getSettings.libraryDataSource, date);
-        dates.set(time, "data");
+        dates.set(time, data);
     }
-    let new_map = new Map(dates);
+    const new_map = new Map(dates);
     setDates(new_map);
   }
 

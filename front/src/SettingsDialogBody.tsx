@@ -1,10 +1,11 @@
-import { Settings, DEFAULT_SETTINGS } from "./App.tsx";
-import { Dispatch, SetStateAction } from 'react';
+import { /*Settings,*/ DEFAULT_SETTINGS } from "./App.tsx";
+// import { Dispatch, SetStateAction } from 'react';
 
-type SettingsDialogBodyProps = {
-    getSettings: Settings;
-    setSettings: Dispatch<SetStateAction<Settings>>;
-};
+
+//type SettingsDialogBodyProps = {
+//    getSettings: Settings;
+//    setSettings: Dispatch<SetStateAction<Settings>>;
+//};
 
 function SettingsDialogBody(/*{getSettings, setSettings}: SettingsDialogBodyProps*/): JSX.Element {
     function updateToggleStateForWebdriverInputs() {

@@ -1,5 +1,7 @@
 {
   "build": {
+    "beforeDevCommand": "cd ../front && npm run build",
+    "beforeBuildCommand": "cd ../front && npm run build",
     "devPath": "../../front/dist",
     "distDir": "../../front/dist",
     "withGlobalTauri": true

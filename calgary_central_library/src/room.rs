@@ -20,7 +20,7 @@ fn stringly_capacity(haystack: &str) -> Option<&str> {
 }
 
 // TODO: add historical capacity data
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub(crate) enum KnownRoom {
     // 2-05A Meeting Room
     R205AMeetingRoom,
@@ -55,13 +55,13 @@ pub(crate) enum KnownRoom {
 }
 
 /// Either a specific room or an unknown room.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub(crate) enum RoomChoice {
     KnownRoom(KnownRoom),
     UnknownRoom,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct Room {
     choice: RoomChoice,
     title: String,
@@ -69,10 +69,12 @@ pub struct Room {
     inferred_capacity: Option<u8>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, specta::Type,
+)]
 struct TimeSlot(u8);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, specta::Type)]
 pub struct Availability(Vec<TimeSlot>);
 
 impl RoomChoice {
@@ -141,6 +143,7 @@ impl TimeSlot {
         format!("{}:{} {}", hour, min, am_pm)
     }
 
+    #[cfg(test)]
     pub(crate) fn to_discriminant(&self) -> u8 {
         self.0
     }

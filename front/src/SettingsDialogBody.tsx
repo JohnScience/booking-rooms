@@ -1,4 +1,4 @@
-import { /*Settings,*/ DEFAULT_SETTINGS } from "./App.tsx";
+import { /*Settings,*/ DEFAULT_SETTINGS } from "./external";
 // import { Dispatch, SetStateAction } from 'react';
 
 

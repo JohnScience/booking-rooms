@@ -1,7 +1,7 @@
 import { faCog } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import "./Header.css";
-import { Settings } from "./App.tsx";
+import { Settings } from "./external";
 import { Dispatch, SetStateAction } from 'react';
 import SettingsDialogBody from './SettingsDialogBody.tsx';
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Calendar as RSCalendar } from 'rsuite';
 import 'rsuite/Calendar/styles/index.css';
-import { Settings, getAvailabilityForDay } from './App';
+import { Settings, getAvailabilityForDay } from './external';
 
 type CalendarProps = {
     getSettings: Settings;
@@ -24,7 +24,13 @@ function Calendar({ getSettings }: CalendarProps) {
     if (dates.has(time)) {
       dates.delete(time);
     } else {
-        const data = getAvailabilityForDay(getSettings.libraryDataSource, date);
+        const source = getSettings.libraryDataSource;
+        const groupSize = getSettings.attendance;
+        const data = getAvailabilityForDay(source, date, groupSize);
+        console.log(data);
+        data?.then((value) => {
+          console.log(value);
+        });
         dates.set(time, data);
     }
     const new_map = new Map(dates);
